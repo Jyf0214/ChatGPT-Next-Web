@@ -1,28 +1,43 @@
-name: NodeJS with Grunt
+name: Sync with Upstream
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  build:
+  sync-upstream:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
-
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
+    - name: Checkout repository
+      uses: actions/checkout@v2
       with:
-        node-version: ${{ matrix.node-version }}
+        fetch-depth: 0
 
-    - name: Build
+    - name: Configure Git
       run: |
-        npm install
-        grunt
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+
+    - name: Add upstream repository
+      run: |
+        git remote add upstream https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web.git
+
+    - name: Fetch from upstream
+      run: |
+        git fetch upstream
+
+    - name: Merge changes from upstream
+      run: |
+        git merge upstream/main --no-commit --no-ff
+
+    - name: Remove GitHub Actions and specified files/folders
+      run: |
+        # List the files and folders you want to exclude
+        git rm --cached -r --ignore-unmatch '.github/workflows/*'
+        git rm --cached -r --ignore-unmatch 'public/*'
+
+    - name: Commit and push changes
+      run: |
+        git commit -m "Sync with upstream and remove specified files/folders" || echo "No changes to commit"
+        git push origin main
